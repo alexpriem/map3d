@@ -7,23 +7,25 @@ function init() {
 	camera.position.z = 2750;
 	scene = new THREE.Scene();
 
-	var segments = total_length;
-	var geometry = new THREE.BufferGeometry();
-	var material = new THREE.LineBasicMaterial({ vertexColors: true });
-
-	geometry.addAttribute( 'position', Float32Array, segments, 3 );
-	geometry.addAttribute( 'color', Float32Array, segments, 3 );
-
-	var positions = geometry.attributes.position.array;
-	var colors = geometry.attributes.color.array;
-
-	var r = 800;
-	var x,y,z;
-	z=0;
-//	console.log(xy);
-	w=0;
 	for ( var i = 0; i < xy.length; i ++ ) {
 		segment=xy[i];
+		var segments = segment.length;;
+		var geometry = new THREE.BufferGeometry();
+		var material = new THREE.LineBasicMaterial({ vertexColors: true });
+
+		geometry.addAttribute( 'position', Float32Array, segments, 3 );
+		geometry.addAttribute( 'color', Float32Array, segments, 3 );
+
+		var positions = geometry.attributes.position.array;
+		var colors = geometry.attributes.color.array;
+
+		var r = 1000;
+		var x,y,z;
+		z=0;
+	//	console.log(xy);
+		w=0;
+	
+		
 		//console.log(segment);
 		for (var j=0; j<segment.length; j++ ) {
 
@@ -33,8 +35,8 @@ function init() {
 			var coord=segment[j];
 			//console.log(coord);
 	//		console.log(coord);
-			x=(coord[0]-minx)/dx*500;
-			y=(coord[1]-miny)/dy*500;
+			x=(coord[0]-minx)/dx*r;
+			y=(coord[1]-miny)/dy*r*(8/7)-500;
 			//console.log('x,y:',x,y);
 
 		// positions
@@ -49,11 +51,12 @@ function init() {
 			colors[ w * 3 + 2 ] = 0.5;
 			w+=1;
 		}
-	}
+	
 
 	geometry.computeBoundingSphere();
 	mesh = new THREE.Line( geometry, material );
 	scene.add( mesh );
+	}
 
 	renderer = new THREE.WebGLRenderer( { antialias: false } );
 	renderer.setSize( window.innerWidth, window.innerHeight );
