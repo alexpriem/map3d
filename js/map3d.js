@@ -7,7 +7,7 @@ function init() {
 	camera.position.z = 2750;
 	scene = new THREE.Scene();
 
-	var segments = 10000;
+	var segments = total_length;
 	var geometry = new THREE.BufferGeometry();
 	var material = new THREE.LineBasicMaterial({ vertexColors: true });
 
@@ -18,22 +18,37 @@ function init() {
 	var colors = geometry.attributes.color.array;
 
 	var r = 800;
-	for ( var i = 0; i < segments; i ++ ) {
+	var x,y,z;
+	z=0;
+//	console.log(xy);
+	w=0;
+	for ( var i = 0; i < xy.length; i ++ ) {
+		segment=xy[i];
+		//console.log(segment);
+		for (var j=0; j<segment.length; j++ ) {
 
-		var x = Math.random() * r - r / 2;
-		var y = Math.random() * r - r / 2;
-		var z = Math.random() * r - r / 2;
+		//var x = Math.random() * r - r / 2;
+		//var y = Math.random() * r - r / 2;
+		//var z = Math.random() * r - r / 2;
+			var coord=segment[j];
+			//console.log(coord);
+	//		console.log(coord);
+			x=(coord[0]-minx)/dx*500;
+			y=(coord[1]-miny)/dy*500;
+			//console.log('x,y:',x,y);
 
 		// positions
 
-		positions[ i * 3 ] = x;
-		positions[ i * 3 + 1 ] = y;
-		positions[ i * 3 + 2 ] = z;
+			positions[ w * 3 ] = x;
+			positions[ w * 3 + 1 ] = y;
+			positions[ w * 3 + 2 ] = z;
 
 		// colors
-		colors[ i * 3 ] = ( x / r ) + 0.5;
-		colors[ i * 3 + 1 ] = ( y / r ) + 0.5;
-		colors[ i * 3 + 2 ] = ( z / r ) + 0.5;
+			colors[ w * 3 ] = 0.5;
+			colors[ w * 3 + 1 ] = 0.5;
+			colors[ w * 3 + 2 ] = 0.5;
+			w+=1;
+		}
 	}
 
 	geometry.computeBoundingSphere();
