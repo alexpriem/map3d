@@ -7,6 +7,8 @@ function init() {
 	camera.position.z = 2750;
 	scene = new THREE.Scene();
 
+
+	mesh={};
 	for ( var i = 0; i < xy.length; i ++ ) {
 		segment=xy[i];
 		var segments = segment.length;;
@@ -54,8 +56,8 @@ function init() {
 	
 
 	geometry.computeBoundingSphere();
-	mesh = new THREE.Line( geometry, material );
-	scene.add( mesh );
+	mesh[i] = new THREE.Line( geometry, material );
+	scene.add( mesh[i] );
 	}
 
 	renderer = new THREE.WebGLRenderer( { antialias: false } );
@@ -94,10 +96,13 @@ function animate() {
 
 function render() {
 
-	//var time = Date.now() * 0.001;
-
-	//mesh.rotation.x = time * 0.25;
-	//mesh.rotation.y = time * 0.5;
+	
+	angle=45.0/360.0*3.14;
+	for ( var i = 0; i < xy.length; i ++ ) {
+		mesh[i].rotation.x =  angle; 
+		mesh[i].rotation.y = angle;
+	
+	}
 	renderer.render( scene, camera );
 }
 
