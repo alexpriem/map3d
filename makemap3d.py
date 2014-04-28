@@ -610,7 +610,7 @@ class mapmaker:
         tree, xmlid = ET.XMLID(f.getvalue())
         
         
-        centroids=[]
+        centroids={}
         for r in regios:
             regio_nr=r[1:].split('_')[0]
             
@@ -648,11 +648,11 @@ class mapmaker:
             except:
                 pass
             c_child.set('id','p'+regio_nr)
-            #c_child.set('class','centroid')
+            c_child.set('class','centroid')
             txt=c_child.get('d').strip()
             x,y=txt[1:].split(' ')
             #print x,y            
-            centroids.append({int(regio_nr):[float(x),float(y)]})
+            centroids[int(regio_nr)]=[float(x),float(y)]
             
             
             
