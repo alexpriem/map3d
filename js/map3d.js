@@ -1,4 +1,13 @@
 
+var controller;
+
+var Controller =function () {
+
+	this.x=0;
+	this.y=0;
+	this.z=0;
+};
+
 function init() {
 
 	container = document.getElementById( 'container' );
@@ -64,10 +73,19 @@ function init() {
 	renderer.setSize( window.innerWidth, window.innerHeight );
 	renderer.gammaInput = true;
 	renderer.gammaOutput = true;
+	renderer.setClearColor(0xEEEEEE, 1.0);
 
 	container.appendChild( renderer.domElement );
 
-	//
+	controller=new Controller();
+	var gui = new dat.GUI();
+    var c1=gui.add(controller, 'x').min(0).max(90).step(5);
+    var c2=gui.add(controller, 'y').min(0).max(90).step(5);
+    var c3=gui.add(controller, 'z').min(0).max(90).step(5);      
+
+    c1.onChange(animate);
+    c2.onChange(animate);
+    c3.onChange(animate);
 
 	stats = new Stats();
 	stats.domElement.style.position = 'absolute';
@@ -96,12 +114,11 @@ function animate() {
 
 function render() {
 
-	
-	angle=45.0/360.0*3.14;
+		
 	for ( var i = 0; i < xy.length; i ++ ) {
-		mesh[i].rotation.x =  angle; 
-		mesh[i].rotation.y = angle;
-	
+		mesh[i].rotation.x = controller.x/360.0*3.14; 
+		mesh[i].rotation.y = controller.y/360.0*3.14;
+		mesh[i].rotation.z = controller.z/360.0*3.14;
 	}
 	renderer.render( scene, camera );
 }
