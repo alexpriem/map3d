@@ -611,6 +611,7 @@ class mapmaker:
         
         
         centroids={}
+        regiocoords={}
         for r in regios:
             regio_nr=r[1:].split('_')[0]
             
@@ -619,8 +620,20 @@ class mapmaker:
             child=children[0]   # altijd maar een child       
             child.attrib.pop("clip-path")
             child.set('class',"outline")
-            child.set('data-regio',regio_nr)            
+            child.set('data-regio',regio_nr)
             child.set('id',r)
+
+            # coordinaten als x-y paren uit xml peuteren
+            coords=child.get('d').strip().split('L')
+            coords[0]=coords[0][1:]  # split Mxx,yy
+            coords[-1]=coords[-1][:-2]  # ends with Lxx yy z
+            regiopart=[]
+            for c in coords:                
+                x,y=c.strip().split(' ')
+                regiopart.append([float(x), float(y)])                                
+            regiocoords[r[1:]]=regiopart                    
+            
+            
            # child.attrib.pop("style")  # inline style verwijderen-- performanceissue?
             el.attrib.pop("id")
             #sys.exit()
@@ -633,7 +646,9 @@ class mapmaker:
             el.set('class', "border")
             ochildren=el.findall("*")
             ochild=ochildren[0]
-            ochild.attrib.pop("clip-path")
+            ochild.attrib.pop("clip-path")            
+
+            
            # ochild.attrib.pop("style")
             
 
@@ -677,8 +692,11 @@ class mapmaker:
         f.write("var centroids="+s+';\n');
         f.close()
 
-        s=json.dumps(regio_ids);
-        f=open
+        f=open("js/regioshapes2.js",'w')        
+        s=json.dumps(regiocoords);
+        f.write("var regioshapes2="+s+';\n');
+        f.close()
+
 
         s='{}'    
         if labelID is not None:

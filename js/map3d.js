@@ -13,7 +13,7 @@ var controller;
 
 var Controller =function () {
 
-	this.x=-90;
+	this.x=0; -90;
 	this.y=0;
 	this.z=0;
 };
@@ -189,6 +189,11 @@ function init() {
 	}
 
     var cube_geometry = new THREE.BoxGeometry( 20, 20, 20 );
+    mincx=centroids[3][0];
+    mincy=centroids[3][0];
+    for (var i=0; i<centroids.length; i++) {
+    	if ()
+    }
 	for (var i=0; i<chart_data.length; i++) {
 		var record=chart_data[i];
 		regio=record[0];
@@ -202,13 +207,13 @@ function init() {
 		y=(coord[1]-miny)/dy*r*(8/7)-500;
 		x=coord[0]*1.5;
 		y=coord[1]*1.5;
-		object.position.x = x*1.9-100;
-		object.position.y = 550-1.2*(8/7)*y;
+		object.position.x = x+200; //x*1.9-100;
+		object.position.y = 550-y; //550-1.2*(8/7)*y;
 		object.position.z=0;
 		object.scale.x = 1;
 		object.scale.y = 1;
 		object.scale.z = Math.log(z);
-		object.rotation.x = -70/360.0*3.14;
+		object.rotation.x = 0/360.0*3.14;
 		object.rotation.y = 0/360.0*3.14;;
 		object.rotation.z = 0/360.0*3.14;;
 
