@@ -1,13 +1,8 @@
-from shapely.geometry import Polygon
-from shapely.wkb import loads
-from osgeo import ogr, osr
-from matplotlib import pyplot
 from math import log, log10
 import os, sys, argparse, json,re
+import shpUtils
 
-import xml.etree.ElementTree as ET
-from StringIO import StringIO
-import dateutil
+import dateutil.parser
 
 
 
@@ -51,154 +46,10 @@ class mapmaker:
             f.close()
 
 
-    def dump_element(self,element):
-        path=element.get_path()
-        vertices = [[vertex[0],vertex[1]] for (vertex,code) in path.iter_segments(simplify=False)]
-        x_vertices= [v[0] for v in vertices]
-        y_vertices= [v[1] for v in vertices]                 
-        if self.minx is None:
-            self.minx=x_vertices[0]
-        if self.miny is None:
-            self.miny=y_vertices[0]
-        if self.maxx is None:
-            self.maxx=x_vertices[0]
-        if self.maxy is None:
-            self.maxy=y_vertices[0]
-
-        self.minx=min(x_vertices+[self.minx])
-        self.miny=min(y_vertices+[self.miny])
-        self.maxx=max(x_vertices+[self.maxx])
-        self.maxy=max(y_vertices+[self.maxy])                
-                        
-        self.shapes.append(vertices)
-        self.total_length+=len(vertices)
 
 
-    def draw_areas(self,p,graph,color,regio_id):
-
-        # returns a list of dom-id's for every polygon drawn
-        # (multipolygons get
-        # dom-id format:  r%regioid_%counter
-        #
-
-        if color is None:
-            color=(1.0,1.0,1.0)
-        bordercolor=(120/255.0,120/255.0,120/255.0)
-        borderwidth=0.5
-        
-        if not(hasattr(p,'geoms')): 
-            xList,yList = p.exterior.xy
-            h=graph.fill(xList,yList, color=color)
-            l=graph.plot(xList,yList, 
-                       color=bordercolor,
-                       linewidth=borderwidth)
-            for il, element in enumerate(h):
-                element.set_gid ("a%d_1" % regio_id)
-                self.dump_element(element)
-            for il, element in enumerate(l):
-                element.set_gid ("l%d_1" % regio_id )
-                self.dump_element(element)
-            return ["a%d_1" % regio_id]
-        else:
-            j=1
-            regs=[]
-            for poly in p:
-                xList,yList = poly.exterior.xy
-                h=graph.fill(xList,yList, color=color)
-                l=graph.plot(xList,yList,
-                            color=bordercolor,
-                            linewidth=borderwidth)            
-                for il, element in enumerate(h):
-                    element.set_gid ("a%d_%d" % (regio_id,j) )   # polylines gaan niet goed
-                    self.dump_element(element)                                    
-                for il, element in enumerate(l):
-                    element.set_gid ("l%d_%d" % (regio_id,j) )
-                    self.dump_element(element)
-                regs.append("a%d_%d" % (regio_id, j))                
-                j+=1
-            
-                
-            return regs
 
 
-    def draw_outline(self,p,graph,outline_id):
-
-        # returns a list of dom-id's for every polygon drawn
-        # (multipolygons get
-        # dom-id format:  r%regioid_%counter
-        #
-        
-        bordercolor=(40/255.0,40/255.0,40/255.0)
-        borderwidth=1.5
-
-        if not(hasattr(p,'geoms')):            
-            xList,yList = p.xy
-            l=graph.plot(xList,yList, 
-                       color=bordercolor,
-                       linewidth=borderwidth)
-            for il, element in enumerate(l):
-                element.set_gid ("o%d_1" % outline_id )
-            return ["o%d_1" % outline_id]
-        else:
-            j=1
-            regs=[]
-            for poly in p:
-                xList,yList = poly.xy
-                l=graph.plot(xList,yList,
-                            color=bordercolor,
-                            linewidth=borderwidth)                            
-                for il, element in enumerate(l):
-                    element.set_gid ("o%d_%d" % (outline_id,j) )                
-                regs.append("o%d_%d" % (outline_id, j))                
-                j+=1            
-            return regs
-
-
-    def draw_centroid (self,p,graph,centroid_id):
-
-        ids=[]
-        bordercolor=(120/255.0,120/255.0,120/255.0)
-        borderwidth=0.5
-        
-        if not(hasattr(p,'geoms')): 
-            x,y = p.xy            
-            l=graph.plot(x,y,
-                        color=bordercolor,
-                        linewidth=borderwidth)            
-            l[0].set_gid ("c%d" % centroid_id)
-            
-
-        return ids
-
-
-    def read_files (self):
-
-        csvfile=args["csvfile"]               
-        outfile=args["outfile"]
-        fullhtml=args["fullhtml"]
-
-        self.driver = ogr.GetDriverByName('ESRI Shapefile')
-        self.area_shapefile=args["area_shapefile"] 
-        self.area_sh = ogr.Open(self.area_shapefile)
-        self.area_layer = self.area_sh.GetLayer()
-
-        self.outline_shapefile=args["outline_shapefile"]
-        if self.outline_shapefile is not None:
-            self.outline_sh = ogr.Open(self.outline_shapefile)
-            self.outline_layer = self.outline_sh.GetLayer()
-
-        self.centroid_shapefile=args["centroid_shapefile"]
-        if self.centroid_shapefile is not None:
-            print 'opened centroidfile', self.centroid_shapefile
-            self.centroid_sh = ogr.Open(self.centroid_shapefile)
-            self.centroid_layer = self.centroid_sh.GetLayer()
-
-        f=open (csvfile)
-        varnames=f.readline().strip().split(',')
-        self.maxdata=m.get_max_data(args["csvfile"])
-        line=f.readline()
-        #mapdata, datum, line=read_frame(f,varnames,line)
-        self.mapdata=self.read_simple_frame(f,varnames)
 
 
     def rescale_color (self, val, minval, maxval):
@@ -510,192 +361,169 @@ class mapmaker:
 
 
 
-    def save_map (self, args):
+    def load_shapefile(self,infile):
+        self.shaperecords=shpUtils.loadShapefile(infile)
+        return self.shaperecords
+        
+            
+    def autoscale (self, shpRecords=None):
+        minx=None
+        maxx=None
+        miny=None
+        maxy=None
+        if shpRecords is None:
+            shpRecords=self.shaperecords
+        for i in range(0,len(shpRecords)):
+            polygons=shpRecords[i]['shp_data']['parts']
+            for poly in polygons:
+                for point in poly['points']:
+                    tempx=float(point['x'])
+                    tempy=float(point['y'])
+                    if minx is None or tempx<minx:
+                        minx=tempx
+                    if miny is None or tempy<miny:
+                        miny=tempy
+                    if maxx is None or tempx>maxx:
+                        maxx=tempx
+                    if maxy is None or tempy>maxy:
+                        maxy=tempy
+        #print minx, maxx, miny, maxy
+        self.dx=maxx-minx
+        self.dy=maxy-miny
+        self.minx=minx
+        self.maxx=maxx
+        self.miny=miny
+        self.maxy=maxy
 
-        layer=self.area_layer
-        mapdata=self.mapdata
-        fieldID=args['shape_fieldID']
+
+    def build_area_js (self, shpRecords=None, field_id=None):
+        
+        if self.minx is None:
+            self.autoscale(shpRecords)
+        minx=self.minx
+        miny=self.miny
+        dx=self.dx
+        dy=self.dy
+        width=self.width
+        height=self.height        
+        
+        js='var xy=[\n' 
+        for i in range(0,len(shpRecords)):
+            dbfdata=shpRecords[i]['dbf_data']            
+            shape_id=dbfdata[field_id]    
+            polygons=shpRecords[i]['shp_data']['parts']
+            for shape_nr, poly in enumerate(polygons): 
+                
+                x = []
+                y = []
+                s='[' 
+                point=poly['points'][0]        
+                tempx = ((float(point['x'])-minx)/dx)*width
+                tempy = ((float(point['y'])-miny)/dy)*height
+                s+='[%.2f, %.2f],\n' % (tempx, tempy)
+                for point in poly['points']:
+                    tempx = ((float(point['x'])-minx)/dx)*width
+                    tempy = ((float(point['y'])-miny)/dy)*height
+                    x.append(tempx)
+                    y.append(tempy)
+                    
+                    s+=' [%.2f, %.2f],\n' % (tempx,tempy)
+                js+=s[:-2]+'],\n'
+            
+        js=js[:-2]+'];\n'
+        
+        return js
+
+
+    def get_shapeids (self, shpRecords=None, field_id=None):
+        if shpRecords is None:
+            shpRecords=self.shaperecords
+
+        shape_ids={}
+        for i in range(0,len(shpRecords)):
+            dbfdata=shpRecords[i]['dbf_data']
+            shape_id=dbfdata[field_id]    
+            polygons=shpRecords[i]['shp_data']['parts']
+        
+            regio=[]
+            for shape_nr, poly in enumerate(polygons):
+                regiopart='%d_%d' % (shape_id, shape_nr)
+                regio.append(regiopart)
+            shape_ids[shape_id]=regio
+        return shape_ids
+
+
+
+
+    def build_centroid_js (self, shpRecords=None, field_id=None):
+        
+        if self.minx is None:
+            self.autoscale(shpRecords)
+        minx=self.minx
+        miny=self.miny
+        dx=self.dx
+        dy=self.dy
+        width=self.width
+        height=self.height        
+        
+        js='var centroids={\n'
+        for i in range(0,len(shpRecords)):
+            dbfdata=shpRecords[i]['dbf_data']            
+            shape_id=dbfdata[field_id]    
+            polygons=shpRecords[i]['shp_data']['parts']
+            for shape_nr, poly in enumerate(polygons):                 
+                point=poly['points'][0]        
+                x = ((float(point['x'])-minx)/dx)*width
+                y = ((float(point['y'])-miny)/dy)*height
+                js+='%d:[%.3f,%.3f],\n' % (shape_id,x,y)
+                
+        js=js[:-2]+'};\n'
+        return js
+
+
+
+    def save_map(self, args):
+
+        self.width=800
+        self.height=800        
+        
+        shpRecords=shpUtils.loadShapefile(args["area_shapefile"])
+        outlineRecords=shpUtils.loadShapefile(args["outline_shapefile"])
+        centroidRecords=shpUtils.loadShapefile(args["centroid_shapefile"])
+        area_js=self.build_area_js(shpRecords, args['shape_fieldID'])
+        centroid_js=self.build_centroid_js(shpRecords, args['shape_fieldID'])
         labelID=args['shape_labelID']
         outfile=args['outfile']
 
-       
-        fig = pyplot.figure(figsize=(7, 8),dpi=300)    
-        ax = fig.add_subplot(1,1,1)
-        ax.xaxis.set_visible(False)
-        ax.yaxis.set_visible(False)
-        fig.frameon=False        
-     #   for item in [fig, ax]:
-     #       item.patch.set_visible(False)
         
-        nonecounter=0
-        regios=[]
-        regio_ids={}
-        regiolabels={}
-        for feature in self.area_layer:
-           # print feature.GetFieldCount()        
-            regio=int(feature.GetField(fieldID))
-            if labelID is not None:
-                label=feature.GetField(labelID)
-                regiolabels[regio]=label            
-            geom=feature.GetGeometryRef()
-            if geom is not None:    
-                geometryParcel = loads(geom.ExportToWkb())
-                ids= self.draw_areas(geometryParcel, ax, None, regio)    
-                regios=regios+ids;
-                regio_ids[regio]=ids
-        print 'saving img:%s (nones:%d)' % (outfile, nonecounter)
-
-        s=json.dumps(self.shapes)
-        s=s.replace("]","]\n")
-        s="var xy="+s+";"
         f=open("js\\area.js","w")
-        f.write(s)
+        f.write(area_js)
         f.write("\n")
-        f.write("var total_length=%d;\n" % self.total_length)
+        #f.write("var total_length=%d;\n" % self.total_length)
         f.write("var minx=%d;\n" % self.minx)
         f.write("var miny=%d;\n" % self.miny)
         f.write("var maxx=%d;\n" % self.maxx)
         f.write("var maxy=%d;\n" % self.maxy)
-        dx=self.maxx-self.minx
-        dy=self.maxy-self.miny
-        f.write("var dx=%d;\n" % dx)
-        f.write("var dy=%d;\n" % dy)
+        f.write("var dx=%d;\n" % self.dx)
+        f.write("var dy=%d;\n" % self.dy)
+        f.write("var width=%d;\n" % self.width)
+        f.write("var height=%d;\n" % self.height)
         
         f.close()
 
-        
-        
+        f=open("js/centroids.js",'w')        
+        f.write(centroid_js);
+        f.close()
 
-        if self.outline_shapefile is not None:
-            fieldID=args['outline_fieldID']
-            labelID=args['outline_labelID']
-            outfile=args['outfile']                
-            
-            outline_regios=[]
-            outline_regio_ids={}
-            outline_labels={}
-            
-            for feature in self.outline_layer:
-               # print feature.GetFieldCount()        
-                outline_regio=int(feature.GetField(fieldID))
-                val=mapdata.get(outline_regio,None)
-                if val is None:
-                    nonecounter+=1                
-                geom=feature.GetGeometryRef()
-                if geom is not None:    
-                    geometryParcel = loads(geom.ExportToWkb())
-                    ids= self.draw_outline(geometryParcel , ax, outline_regio)    
-                    outline_regios=outline_regios+ids;
-                    outline_regio_ids[outline_regio]=ids
-
-
-        centroid_ids={}
-        if self.centroid_shapefile is not None:
-            print 'reading centroid'
-            fieldID=args['centroid_fieldID']            
-            outfile=args['outfile']        
-            for feature in self.centroid_layer:
-                regio=int(feature.GetField(fieldID))
-                #print regio
-                geom=feature.GetGeometryRef()
-                if geom is not None:    
-                    geometryParcel = loads(geom.ExportToWkb())
-                    ids= self.draw_centroid(geometryParcel , ax, regio)
-                    centroid_ids[regio]=ids
-                    
-        # add classes to DOM-objects
-        
-        f = StringIO()
-        pyplot.savefig(f, format="svg", bbox_inches = 'tight', pad_inches = 0)
-        tree, xmlid = ET.XMLID(f.getvalue())
-        
-        
-        centroids={}
-        regiocoords={}
-        for r in regios:
-            regio_nr=r[1:].split('_')[0]
-            
-            el = xmlid[r]  # lookup regio_id  in xml
-            children=el.findall("*")
-            child=children[0]   # altijd maar een child       
-            child.attrib.pop("clip-path")
-            child.set('class',"outline")
-            child.set('data-regio',regio_nr)
-            child.set('id',r)
-
-            # coordinaten als x-y paren uit xml peuteren
-            coords=child.get('d').strip().split('L')
-            coords[0]=coords[0][1:]  # split Mxx,yy
-            coords[-1]=coords[-1][:-2]  # ends with Lxx yy z
-            regiopart=[]
-            for c in coords:                
-                x,y=c.strip().split(' ')
-                regiopart.append([float(x), float(y)])                                
-            regiocoords[r[1:]]=regiopart                    
-            
-            
-           # child.attrib.pop("style")  # inline style verwijderen-- performanceissue?
-            el.attrib.pop("id")
-            #sys.exit()
-            
-            
-            
-            # lookup border around regions
-            line='l'+r[1:]    
-            el = xmlid[line]  # lookup regio_id  in xml        
-            el.set('class', "border")
-            ochildren=el.findall("*")
-            ochild=ochildren[0]
-            ochild.attrib.pop("clip-path")            
-
-            
-           # ochild.attrib.pop("style")
-            
-
-            # smerige hack om centroides uit data te krijgen
-            dot='c'+regio_nr
-            el = xmlid[dot]  # lookup centroids
-            #el.set('class', "centroid_g")
-            cchildren=el.findall("*")
-            c_child=cchildren[0]
-            try:
-                c_child.attrib.pop("clip-path")
-            except:
-                pass
-            c_child.set('id','p'+regio_nr)
-            c_child.set('class','centroid')
-            txt=c_child.get('d').strip()
-            x,y=txt[1:].split(' ')
-            #print x,y            
-            centroids[int(regio_nr)]=[float(x),float(y)]
-            
-            
-            
-           # ochild.attrib.pop("style")
-
-       
-        del (xmlid['patch_1'])
-        del (xmlid['patch_2'])
-        del (xmlid['patch_3'])
-        del (xmlid['patch_4'])
-        #del (xmlid['patch_5'])
-        
-        root=el.find("..")        
-        ET.ElementTree(tree).write(outfile+'.svg')
-        
+        regio_ids=self.get_shapeids(shpRecords, args['shape_fieldID'])
         for regio,shapes in regio_ids.items():
             regio_ids[regio]=[shape[1:] for shape in shapes]
-        
-        
-        f=open("js/centroids.js",'w')        
-        s=json.dumps(centroids);
-        f.write("var centroids="+s+';\n');
-        f.close()
+                
 
-        f=open("js/regioshapes2.js",'w')        
-        s=json.dumps(regiocoords);
-        f.write("var regioshapes2="+s+';\n');
-        f.close()
+#        f=open("js/regioshapes2.js",'w')        
+#        s=json.dumps(regiocoords);
+#        f.write("var regioshapes2="+s+';\n');
+        #f.close()
 
 
         s='{}'    
@@ -782,10 +610,6 @@ class mapmaker:
 
 
     
-# Apparently, the `register_namespace` method works only with 
-# python 2.7 and up and is necessary to avoid garbling the XML name
-# space with ns0.
-ET.register_namespace("","http://www.w3.org/2000/svg")    
 
 
 parser = argparse.ArgumentParser(description='generate calendar from repeating data')
@@ -821,14 +645,6 @@ parser.add_argument('-rf','--regiofile', dest='regiofile',  help='regiofile', re
 args=vars(parser.parse_args())
 m=mapmaker(args)
 
-
-m.read_files()
-
-
-
-
-
-#print mapdata.items()
 
 m.prep_js(args)
 m.save_map (args)

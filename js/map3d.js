@@ -149,7 +149,7 @@ function init() {
 		var positions = geometry.attributes.position.array;
 		var colors = geometry.attributes.color.array;
 
-		var r = 1000;
+		var r = 1;
 		var x,y,z;
 		z=0;
 	//	console.log(xy);
@@ -165,8 +165,8 @@ function init() {
 			var coord=segment[j];
 			//console.log(coord);
 	//		console.log(coord);
-			x=(coord[0]-minx)/dx*r;
-			y=(coord[1]-miny)/dy*r*(8/7)-500;
+			x=coord[0]*r;
+			y=coord[1]*r-0.5*height;
 			//console.log('x,y:',x,y);
 
 		// positions
@@ -189,10 +189,10 @@ function init() {
 	}
 
     var cube_geometry = new THREE.BoxGeometry( 20, 20, 20 );
-    mincx=centroids[3][0];
-    mincy=centroids[3][0];
+//    mincx=centroids[3][0];
+//    mincy=centroids[3][1];
     for (var i=0; i<centroids.length; i++) {
-    	if ()
+    	
     }
 	for (var i=0; i<chart_data.length; i++) {
 		var record=chart_data[i];
@@ -203,12 +203,10 @@ function init() {
 		
 
 		var object = new THREE.Mesh( cube_geometry, new THREE.MeshLambertMaterial( { color: 0x002c61 } ) );		
-		x=(coord[0]-minx)/dx*r;
-		y=(coord[1]-miny)/dy*r*(8/7)-500;
-		x=coord[0]*1.5;
-		y=coord[1]*1.5;
-		object.position.x = x+200; //x*1.9-100;
-		object.position.y = 550-y; //550-1.2*(8/7)*y;
+		x=coord[0];
+		y=coord[1];
+		object.position.x = x; //x*1.9-100;
+		object.position.y = y-0.5*height; //550-1.2*(8/7)*y;
 		object.position.z=0;
 		object.scale.x = 1;
 		object.scale.y = 1;
