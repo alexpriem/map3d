@@ -139,7 +139,7 @@ function init() {
 	mesh={};
 	for ( var i = 0; i < xy.length; i ++ ) {
 		segment=xy[i];
-		var segments = segment.length;;
+		var segments = segment.length;
 		var geometry = new THREE.BufferGeometry();
 		var material = new THREE.LineBasicMaterial({ vertexColors: true });
 
@@ -194,6 +194,7 @@ function init() {
     for (var i=0; i<centroids.length; i++) {
     	
     }
+    centroid_objects=[];
 	for (var i=0; i<chart_data.length; i++) {
 		var record=chart_data[i];
 		regio=record[0];
@@ -205,8 +206,8 @@ function init() {
 		var object = new THREE.Mesh( cube_geometry, new THREE.MeshLambertMaterial( { color: 0x002c61 } ) );		
 		x=coord[0];
 		y=coord[1];
-		object.position.x = x; //x*1.9-100;
-		object.position.y = y-0.5*height; //550-1.2*(8/7)*y;
+		object.position.x = x;
+		object.position.y = y-0.5*height; 
 		object.position.z=0;
 		object.scale.x = 1;
 		object.scale.y = 1;
@@ -214,7 +215,7 @@ function init() {
 		object.rotation.x = 0/360.0*3.14;
 		object.rotation.y = 0/360.0*3.14;;
 		object.rotation.z = 0/360.0*3.14;;
-
+		centroid_objects.push(object);
 		scene.add(object);
 	}
 
@@ -267,10 +268,18 @@ function render() {
 
 			
 	for ( var i = 0; i < xy.length; i ++ ) {
-		mesh[i].rotation.x = controller.x/360.0*3.14; 
-		mesh[i].rotation.y = controller.y/360.0*3.14;
-		mesh[i].rotation.z = controller.z/360.0*3.14;
+		var m=mesh[i].rotation;
+		m.x = controller.x/360.0*3.14; 
+		m.y = controller.y/360.0*3.14;
+		m.z = controller.z/360.0*3.14;
 	}
+	for (var i=0; i<centroid_objects.length; i++) {
+		var c=centroid_objects[i].rotation;
+		c.x = controller.x/360.0*3.14; 
+		c.y = controller.y/360.0*3.14;
+		c.z = controller.z/360.0*3.14;
+	}
+	
 	renderer.render( scene, camera );
 }
 
